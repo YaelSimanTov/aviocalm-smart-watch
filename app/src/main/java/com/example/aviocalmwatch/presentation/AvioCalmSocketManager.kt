@@ -10,18 +10,26 @@ class AvioCalmSocketManager {
 
     private var mSocket: Socket? = null
     private var currentServerUrl: String? = null
+    private var onConnectionStateChange: ((Boolean) -> Unit)? = null
 
     companion object {
         private const val TAG = "AvioCalmWatch"
         private const val EVENT_WATCH_VITALS = "watch_vitals_update"
     }
 
-    fun connectToServer(serverUrl: String) {
+    fun connectToServer(serverUrl: String, connectionStateCallback: ((Boolean) -> Unit)? = null) {
         try {
             currentServerUrl = serverUrl
+            onConnectionStateChange = connectionStateCallback
 
             if (mSocket != null && mSocket?.connected() == true) {
                 return
+            }
+
+            // Clean up stale or disconnected socket before creating a new one to prevent leaks
+            if (mSocket != null) {
+                mSocket?.off()
+                mSocket = null
             }
 
             val options = IO.Options().apply {
@@ -35,14 +43,17 @@ class AvioCalmSocketManager {
 
             mSocket?.on(Socket.EVENT_CONNECT) {
                 Log.d(TAG, "Socket connected successfully: ${mSocket?.id()}")
+                onConnectionStateChange?.invoke(true)
             }
 
             mSocket?.on(Socket.EVENT_CONNECT_ERROR) { args ->
                 Log.e(TAG, "Socket connection error: ${args.joinToString()}")
+                onConnectionStateChange?.invoke(false)
             }
 
             mSocket?.on(Socket.EVENT_DISCONNECT) {
                 Log.w(TAG, "Socket disconnected")
+                onConnectionStateChange?.invoke(false)
             }
 
             mSocket?.connect()
@@ -52,8 +63,8 @@ class AvioCalmSocketManager {
         }
     }
 
-     fun sendVitals(deviceId: String, heartRate: Int, spo2: Int?, ibiList: List<Int>) {
-        // 1. Check connection cleanly
+    fun sendVitals(deviceId: String, heartRate: Int, spo2: Int?, ibiList: List<Int>) {
+        // Check connection before attempting to send
         if (mSocket?.connected() != true) {
             Log.w(TAG, "Socket disconnected. Dropping packet. Socket.io will auto-reconnect.")
             return
@@ -64,7 +75,7 @@ class AvioCalmSocketManager {
                 put("deviceId", deviceId)
                 put("vitals", JSONObject().apply {
                     put("heartRate", heartRate)
-                    put("spo2", spo2 ?: JSONObject.NULL) // 2. Safe null handling
+                    put("spo2", spo2 ?: JSONObject.NULL) // Safe null handling for missing SpO2
                     put("ibiData", JSONArray(ibiList))
                 })
                 put("timestamp", System.currentTimeMillis())
