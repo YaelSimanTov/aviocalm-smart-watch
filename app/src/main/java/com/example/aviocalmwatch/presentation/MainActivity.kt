@@ -67,8 +67,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val isConnected by SensorService.connectionStatusFlow.collectAsState()
             val isRunning by SensorService.isRunningFlow.collectAsState()
-            val currentHr by SensorService.heartRateFlow.collectAsState()
-            val currentSpo2 by SensorService.spo2Flow.collectAsState()
 
             MaterialTheme {
                 Box(
@@ -111,21 +109,6 @@ class MainActivity : ComponentActivity() {
 
                         Spacer(modifier = Modifier.height(6.dp))
 
-                        // Live sensor readings (shown only while service is running)
-                        if (isRunning) {
-                            Text(
-                                text = "HR: ${currentHr?.toString() ?: "---"} bpm",
-                                fontSize = 13.sp,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "SpO2: ${currentSpo2?.toString() ?: "---"}%",
-                                fontSize = 13.sp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                        }
-
                         // Start / Stop buttons
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -138,7 +121,12 @@ class MainActivity : ComponentActivity() {
                                 ),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(text = "Start", fontSize = 13.sp)
+                                Text(
+                                    text = "Start",
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
 
                             Button(
@@ -149,7 +137,12 @@ class MainActivity : ComponentActivity() {
                                 ),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(text = "Stop", fontSize = 13.sp)
+                                Text(
+                                    text = "Stop",
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
                     }
